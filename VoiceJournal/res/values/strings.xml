@@ -9,5 +9,6 @@
     <string name="plause_play">Plause//Play</string>
     <string name="fastfwd">FastFwd</string>
     <string name="next">Next</string>
+    <string name="no_record">No Records Found</string>
 
 </resources>

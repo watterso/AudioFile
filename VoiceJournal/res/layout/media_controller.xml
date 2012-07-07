@@ -16,7 +16,7 @@
             android:layout_weight="1"
             android:text="@string/default_time"
             android:textSize="10dp"
-            android:layout_marginTop="7dp"
+            android:layout_marginTop= "@dimen/padding_small"
             android:layout_marginLeft="4dp"
             android:textColor="#ffffff"  />
 
@@ -33,7 +33,7 @@
             android:layout_weight="1"
             android:text="@string/default_time"
             android:textSize="10dp"
-            android:layout_marginTop="7dp"
+            android:layout_marginTop="@dimen/padding_small"
             android:textColor="#ffffff"   />
 
     </LinearLayout>

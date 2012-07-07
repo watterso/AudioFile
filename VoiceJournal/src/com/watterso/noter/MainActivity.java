@@ -2,7 +2,9 @@ package com.watterso.noter;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 
+import android.app.ActionBar;
 import android.app.Activity;
 import android.content.SharedPreferences;
 import android.media.AudioManager;
@@ -18,12 +20,15 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
+import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 public class MainActivity extends Activity implements OnPreparedListener, MediaLayout.MediaPlayerControl {
 	  private static final String TAG = "RecordTaker";
+	  private static final String REC_PATH  = Environment.getExternalStorageDirectory().getAbsolutePath()+"/Recordings/";
 	  public static final String PREFS_NAME = "RecPref";
 	  public MediaPlayer mediaPlayer;
 	  private MediaLayout mediaController;
@@ -31,6 +36,8 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
 	  private Bundle saveThisInstance;
 	  private ListView recordList;
 	  private Handler handler = new Handler();
+	  private DatabaseHandler db;
+	  private ArrayList<String> tags;
 	  boolean mExternalStorageAvailable = false;
 	  boolean mExternalStorageWriteable = false;
     @Override
@@ -46,9 +53,29 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
         boolean firstCheck = settings.getBoolean("first", false);	//Logically confusing but works better if false means its first time
         if(!firstCheck) firstTime();
        
+        db = new DatabaseHandler(this);
+        
+        tags = (ArrayList<String>) db.getTags();
+        tags.add(0, "#All");
+        ArrayAdapter<String> spinDapt = new ArrayAdapter<String>(this, R.layout.spin, 
+        				android.R.id.text1,tags );							//Spinner Stuff
+        spinDapt.setDropDownViewResource(R.layout.drop);
+        ActionBar action = getActionBar();
+        action.setNavigationMode(ActionBar.NAVIGATION_MODE_LIST);
+        action.setListNavigationCallbacks(spinDapt, new ActionBar.OnNavigationListener() {
+			
+			public boolean onNavigationItemSelected(int itemPosition, long itemId) {
+				if(itemPosition==0)
+					fillData();
+				else
+					fillData(tags.get(itemPosition));
+				return false;
+			}
+		});
+        
         recordList= (ListView) findViewById(R.id.recordings);
-        fillData();
-        recordList.setOnItemClickListener(myClickListener);
+        fillData();																		//ListView Populate
+        recordList.setOnItemClickListener(mClickListener);
         
         mediaPlayer = new MediaPlayer();
         mediaPlayer.setOnPreparedListener(this);
@@ -66,8 +93,20 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
     	}
     }
     public void fillData(){
-    	File[] files = (new File(Environment.getExternalStorageDirectory().getAbsolutePath()+"/Recordings/")).listFiles();
-    	ArrayAdapter<File> temp = new ArrayAdapter<File>(this, R.layout.listitem, files);
+    	ArrayAdapter<Entry> temp = new ArrayAdapter<Entry>(this, R.layout.listitem, db.getAllEntries());
+    	if(!temp.isEmpty()){
+    		Log.d("ArrayAdapter", "NOT EMPTY");
+    		recordList.setAdapter(temp);
+    	}else{
+    		Log.d("ArrayAdapter", "EMPTY");
+    		String [] tempS = {""};
+    		ArrayAdapter<String> temp1 = new ArrayAdapter<String>(this,R.layout.listitem, tempS);
+    		recordList.setAdapter(temp1);
+    	}
+    }
+    public void fillData(String tag){
+    	ArrayAdapter<Entry> temp = new ArrayAdapter<Entry>(this, 
+    			R.layout.listitem, db.getAllEntries(tag));				//for best results, tag should start with a '#'
     	if(!temp.isEmpty()){
     		Log.d("ArrayAdapter", "NOT EMPTY");
     		recordList.setAdapter(temp);
@@ -93,11 +132,12 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
     	    mExternalStorageAvailable = mExternalStorageWriteable = false;
     	}
     }
-    public OnItemClickListener myClickListener = new OnItemClickListener() {
+    public OnItemClickListener mClickListener = new OnItemClickListener() {
 		  
 		public void onItemClick(AdapterView<?> arg0, View arg1, int arg2, long arg3) {
 			mediaPlayer.reset();
 			audioFile = (String) ((TextView)arg1).getText();
+			if(audioFile==null) return;
    	         try {
    	        	 mediaPlayer.setDataSource(audioFile);
    	        	 mediaPlayer.prepare();

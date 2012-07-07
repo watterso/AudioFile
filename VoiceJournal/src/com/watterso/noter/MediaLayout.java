@@ -3,12 +3,10 @@ package com.watterso.noter;
 import java.util.Formatter;
 import java.util.Locale;
 
-
 import android.content.Context;
 import android.os.Handler;
 import android.os.Message;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
@@ -23,13 +21,11 @@ public class MediaLayout extends LinearLayout {
 	private MediaPlayerControl  mPlayer;
     private ProgressBar         mProgress;
     private TextView            mEndTime, mCurrentTime;
-    private boolean             mShowing;
     private boolean             mDragging;
     private static final int    FADE_OUT = 1;
     private static final int    SHOW_PROGRESS = 2;
     private boolean             mUseFastForward;
     private boolean             mFromXml;
-    private boolean             mListenersSet;
     private View.OnClickListener mNextListener, mPrevListener;
     StringBuilder               mFormatBuilder;
     Formatter                   mFormatter;
@@ -104,12 +100,10 @@ public class MediaLayout extends LinearLayout {
     private Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
-            int pos;
             switch (msg.what) {
                 case FADE_OUT:
                     break;
                 case SHOW_PROGRESS:
-                    pos = setProgress();
                     if (mPlayer!=null) {
                     	if (!mDragging && mPlayer.isPlaying()) {
                     		msg = obtainMessage(SHOW_PROGRESS);
@@ -160,7 +154,7 @@ public class MediaLayout extends LinearLayout {
     	//Log.d("PROGRESS", "SET");
         return position;
     }
-    public void show(){
+	public void show(){
     	setProgress();
     	updatePausePlay();
         mHandler.sendEmptyMessage(SHOW_PROGRESS);
@@ -326,7 +320,6 @@ public class MediaLayout extends LinearLayout {
     public void setPrevNextListeners(View.OnClickListener next, View.OnClickListener prev) {
         mNextListener = next;
         mPrevListener = prev;
-        mListenersSet = true;
 
         
         installPrevNextListeners();
