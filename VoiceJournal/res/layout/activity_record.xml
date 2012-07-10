@@ -1,0 +1,57 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical" >
+
+    <TextView
+        android:id="@+id/entryLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="@dimen/padding_medium"
+        android:layout_marginTop="@dimen/padding_medium"
+        android:text="@string/entry_title" />
+
+    <EditText
+        android:id="@+id/entryName"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="@dimen/padding_xlarge"
+        android:layout_marginRight="@dimen/padding_xlarge"
+        android:inputType="text" >
+    </EditText>
+
+    <TextView
+        android:id="@+id/tagLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="@dimen/padding_medium"
+        android:text="@string/entry_tag" />
+
+    <AutoCompleteTextView
+        android:id="@+id/tagger"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="@dimen/padding_xlarge"
+        android:layout_marginRight="@dimen/padding_xlarge" />
+    <RelativeLayout
+        android:id="@+id/buttHold"
+        android:layout_width="match_parent"
+    	android:layout_height="match_parent">
+    <ImageButton
+        android:id="@+id/butt"
+        android:src="@drawable/ic_butt_record"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="@dimen/padding_large" />
+    <ImageButton
+        android:id="@+id/pause"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_toRightOf="@id/butt"
+        android:layout_marginTop="@dimen/padding_xlarge" />
+    </RelativeLayout>
+
+</LinearLayout>

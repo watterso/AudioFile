@@ -6,6 +6,7 @@ import java.util.ArrayList;
 
 import android.app.ActionBar;
 import android.app.Activity;
+import android.app.Dialog;
 import android.content.SharedPreferences;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
@@ -18,18 +19,22 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
-import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ListView;
-import android.widget.Spinner;
-import android.widget.TextView;
 
 public class MainActivity extends Activity implements OnPreparedListener, MediaLayout.MediaPlayerControl {
 	  private static final String TAG = "RecordTaker";
+	  public static final String EXTRA_MESSAGE = "com.watterso.noter.MESSAGE";
 	  private static final String REC_PATH  = Environment.getExternalStorageDirectory().getAbsolutePath()+"/Recordings/";
 	  public static final String PREFS_NAME = "RecPref";
+	  public static final int RECORD_DIALOG = 1;
+	  public Dialog dialog;
+	  public boolean rec = false;
 	  public MediaPlayer mediaPlayer;
 	  private MediaLayout mediaController;
 	  private String audioFile;
@@ -38,6 +43,7 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
 	  private Handler handler = new Handler();
 	  private DatabaseHandler db;
 	  private ArrayList<String> tags;
+	  private ArrayList<Entry> entries;
 	  boolean mExternalStorageAvailable = false;
 	  boolean mExternalStorageWriteable = false;
     @Override
@@ -93,7 +99,8 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
     	}
     }
     public void fillData(){
-    	ArrayAdapter<Entry> temp = new ArrayAdapter<Entry>(this, R.layout.listitem, db.getAllEntries());
+    	entries = (ArrayList<Entry>) db.getAllEntries();
+    	ArrayAdapter<Entry> temp = new ArrayAdapter<Entry>(this, R.layout.listitem, entries);
     	if(!temp.isEmpty()){
     		Log.d("ArrayAdapter", "NOT EMPTY");
     		recordList.setAdapter(temp);
@@ -105,8 +112,9 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
     	}
     }
     public void fillData(String tag){
+    	entries = (ArrayList<Entry>) db.getAllEntries(tag);
     	ArrayAdapter<Entry> temp = new ArrayAdapter<Entry>(this, 
-    			R.layout.listitem, db.getAllEntries(tag));				//for best results, tag should start with a '#'
+    			R.layout.listitem, entries);				//for best results, tag should start with a '#'
     	if(!temp.isEmpty()){
     		Log.d("ArrayAdapter", "NOT EMPTY");
     		recordList.setAdapter(temp);
@@ -134,9 +142,10 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
     }
     public OnItemClickListener mClickListener = new OnItemClickListener() {
 		  
-		public void onItemClick(AdapterView<?> arg0, View arg1, int arg2, long arg3) {
+		public void onItemClick(AdapterView<?> arg0, View arg1, int position, long arg3) {
 			mediaPlayer.reset();
-			audioFile = (String) ((TextView)arg1).getText();
+			if(entries.size()==0) return;
+			audioFile = entries.get(position).getFile();
 			if(audioFile==null) return;
    	         try {
    	        	 mediaPlayer.setDataSource(audioFile);
@@ -157,6 +166,41 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
     	switch (item.getItemId()) {
     		case R.id.menu_settings:
     			return true;
+    		case R.id.menu_record:
+        		dialog = new Dialog(this);
+        		dialog.setOwnerActivity(this);
+    			dialog.setContentView(R.layout.activity_record);
+    			dialog.setTitle("Make a Recording");
+    			dialog.setCanceledOnTouchOutside(false);
+    			final ImageButton butt = (ImageButton) dialog.findViewById(R.id.butt);
+    			final ImageButton paus = (ImageButton) dialog.findViewById(R.id.pause);
+    			paus.setImageResource(android.R.drawable.ic_media_pause);
+    			paus.setVisibility(View.GONE);
+				butt.setOnClickListener(new View.OnClickListener() {
+					public void onClick(View v) {
+						if(!rec){
+							butt.setImageResource(R.drawable.ic_butt_stop);
+							paus.setVisibility(View.VISIBLE);
+							//begin recording
+							rec = true;
+						}else{
+							//save stuff
+							rec = false;
+							dialog.dismiss();
+						}
+					}
+			    });
+				paus.setOnClickListener(new View.OnClickListener() {
+					public void onClick(View v) {
+						//pause recording
+						rec=false;
+		    			paus.setVisibility(View.GONE);
+		    			butt.setImageResource(R.drawable.ic_butt_record);
+					}
+			    });
+    			dialog.show();
+				
+			return true;
     		default: 
     			return super.onOptionsItemSelected(item);
     	}

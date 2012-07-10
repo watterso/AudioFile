@@ -10,5 +10,9 @@
     <string name="fastfwd">FastFwd</string>
     <string name="next">Next</string>
     <string name="no_record">No Records Found</string>
+    <string name="title_activity_record">RecordActivity</string>
+    <string name="entry_title">Add a Title:</string>
+    <string name="entry_tag">Tag It:</string>
+    
 
 </resources>
