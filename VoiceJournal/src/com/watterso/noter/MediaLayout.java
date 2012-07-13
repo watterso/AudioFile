@@ -7,6 +7,7 @@ import android.content.Context;
 import android.os.Handler;
 import android.os.Message;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
@@ -38,6 +39,7 @@ public class MediaLayout extends LinearLayout {
 	public MediaLayout(Context context, AttributeSet attrs) {
 		super(context, attrs);
 		inflate(context, R.layout.media_controller, this);
+		mUseFastForward = true;
 	}
 	public MediaLayout(Context context) {
 		super(context);
@@ -76,9 +78,9 @@ public class MediaLayout extends LinearLayout {
 
         // By default these are hidden. They will be enabled when setPrevNextListeners() is called 
         mNextButton = (ImageButton) v.findViewById(com.watterso.noter.R.id.next);
-        
+        mNextButton.setVisibility(View.GONE);
         mPrevButton = (ImageButton) v.findViewById(com.watterso.noter.R.id.prev);
-        
+        mPrevButton.setVisibility(View.GONE);
 
         mProgress = (ProgressBar) v.findViewById(com.watterso.noter.R.id.mediacontroller_progress);
         if (mProgress != null) {
@@ -105,8 +107,10 @@ public class MediaLayout extends LinearLayout {
                     break;
                 case SHOW_PROGRESS:
                     if (mPlayer!=null) {
-                    	if (!mDragging && mPlayer.isPlaying()) {
+                    	//Log.d("Player Playing:",""+mPlayer.isPlaying());
+                    	if (mPlayer.isPlaying()) {
                     		msg = obtainMessage(SHOW_PROGRESS);
+                    		setProgress();							//This updates the seek bar
                     		sendMessageDelayed(msg, 1000);
                     	}
                     }
@@ -154,7 +158,7 @@ public class MediaLayout extends LinearLayout {
     	//Log.d("PROGRESS", "SET");
         return position;
     }
-	public void show(){
+	public void updateSeek(){
     	setProgress();
     	updatePausePlay();
         mHandler.sendEmptyMessage(SHOW_PROGRESS);
@@ -163,13 +167,12 @@ public class MediaLayout extends LinearLayout {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-    	show();
+ 
         return true;
     }
 
     @Override
     public boolean onTrackballEvent(MotionEvent ev) {
-    	show();
         return false;
     }
 
@@ -181,7 +184,7 @@ public class MediaLayout extends LinearLayout {
                 keyCode ==  KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE ||
                 keyCode ==  KeyEvent.KEYCODE_SPACE)) {
             doPauseResume();
-            show();
+            updateSeek();
             return true;
         } else if (keyCode ==  KeyEvent.KEYCODE_MEDIA_STOP) {
             if (mPlayer.isPlaying()) {
@@ -197,7 +200,7 @@ public class MediaLayout extends LinearLayout {
 
             return true;
         } else {
-        	show();
+        	updateSeek();
         }
         return super.dispatchKeyEvent(event);
     }
@@ -205,7 +208,7 @@ public class MediaLayout extends LinearLayout {
     private View.OnClickListener mPauseListener = new View.OnClickListener() {
         public void onClick(View v) {
             doPauseResume();
-            show();
+            updateSeek();
         }
     };
 
@@ -237,7 +240,7 @@ public class MediaLayout extends LinearLayout {
     private OnSeekBarChangeListener mSeekListener = new OnSeekBarChangeListener() {
         long duration;
         public void onStartTrackingTouch(SeekBar bar) {
-        	show();
+        	updateSeek();
         	if(mPlayer!=null)	duration = mPlayer.getDuration();
         }
         public void onProgressChanged(SeekBar bar, int progress, boolean fromtouch) {
@@ -271,10 +274,10 @@ public class MediaLayout extends LinearLayout {
             mRewButton.setEnabled(enabled);
         }
         if (mNextButton != null) {
-            mNextButton.setEnabled(enabled && mNextListener != null);
+            //mNextButton.setEnabled(enabled && mNextListener != null);
         }
         if (mPrevButton != null) {
-            mPrevButton.setEnabled(enabled && mPrevListener != null);
+            //mPrevButton.setEnabled(enabled && mPrevListener != null);
         }
         if (mProgress != null) {
             mProgress.setEnabled(enabled);
@@ -307,13 +310,13 @@ public class MediaLayout extends LinearLayout {
 
     private void installPrevNextListeners() {
         if (mNextButton != null) {
-            mNextButton.setOnClickListener(mNextListener);
-            mNextButton.setEnabled(mNextListener != null);
+            //mNextButton.setOnClickListener(mNextListener);
+            //mNextButton.setEnabled(mNextListener != null);
         }
 
         if (mPrevButton != null) {
-            mPrevButton.setOnClickListener(mPrevListener);
-            mPrevButton.setEnabled(mPrevListener != null);
+            //mPrevButton.setOnClickListener(mPrevListener);
+            //mPrevButton.setEnabled(mPrevListener != null);
         }
     }
 
@@ -325,10 +328,10 @@ public class MediaLayout extends LinearLayout {
         installPrevNextListeners();
 
         if (mNextButton != null && !mFromXml) {
-        	mNextButton.setVisibility(View.VISIBLE);
+        	//mNextButton.setVisibility(View.VISIBLE);
         }
         if (mPrevButton != null && !mFromXml) {
-        	mPrevButton.setVisibility(View.VISIBLE);
+        	//mPrevButton.setVisibility(View.VISIBLE);
         }
         
     }

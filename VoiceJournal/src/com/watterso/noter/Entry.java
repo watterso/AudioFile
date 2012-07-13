@@ -22,7 +22,7 @@ public class Entry {
 		this._name = name;
 		this._tag = tag;
 		this._fileName = file;
-		String format = "MMM DD YYYY";
+		String format = "MMM dd yyyy";
 		SimpleDateFormat ad =new SimpleDateFormat(format);
 		try {
 			this._timeStamp = ad.parse(time);
@@ -38,9 +38,10 @@ public class Entry {
 		this._fileName = uniqueFile();
     }
 	private String uniqueFile(){
-		String format = "MMM DD YYYY";
+		String format = "MMM dd yyyy";
 		SimpleDateFormat ad =new SimpleDateFormat(format);
-        return ""+ad.format(this._timeStamp).hashCode();
+        String temp = ""+ad.format(this._timeStamp).hashCode();
+        return this._name+temp.substring(0,3);
 	}
 	public int getID(){
         return this._id;
@@ -55,12 +56,12 @@ public class Entry {
         this._fileName = file;
     }
     public String getTime(){
-    	String format = "MMM DD YYYY";
+    	String format = "MMM dd yyyy";
 		SimpleDateFormat ad =new SimpleDateFormat(format);
         return ad.format(this._timeStamp);
     }
     public void setTime(String time){
-    	String format = "MMM DD YYYY";
+    	String format = "MMM dd yyyy";
 		SimpleDateFormat ad =new SimpleDateFormat(format);
 		try {
 			this._timeStamp = ad.parse(time);
@@ -82,15 +83,15 @@ public class Entry {
         this._tag = tag;
     }
     public String toString(){
-    	String format =  "MMM DD";
+    	String format =  "MMM dd";
     	Calendar now = Calendar.getInstance();
     	Calendar then = new GregorianCalendar();
     	then.setTime(this._timeStamp);
     	if(then.get(Calendar.YEAR)<now.get(Calendar.YEAR))
-    		format = "MMM DD YYYY";
+    		format = "MMM dd yyyy";
 		SimpleDateFormat ad =new SimpleDateFormat(format);
 		
-    	return _name+"\t#"+_tag+"\t"+ad.format(_timeStamp);
+    	return this._name+" #"+this._tag+" "+ad.format(this._timeStamp);
     }
 
 }

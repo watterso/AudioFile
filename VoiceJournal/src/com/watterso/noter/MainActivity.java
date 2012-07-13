@@ -3,10 +3,17 @@ package com.watterso.noter;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 
+import android.annotation.SuppressLint;
 import android.app.ActionBar;
 import android.app.Activity;
 import android.app.Dialog;
+import android.app.NotificationManager;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
@@ -14,23 +21,28 @@ import android.media.MediaPlayer.OnPreparedListener;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.IBinder;
+import android.text.method.KeyListener;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.View.OnClickListener;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
+import android.widget.AutoCompleteTextView;
+import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ListView;
+import android.widget.Toast;
+
+import com.watterso.noter.AudioIntentService.AudioBinder;
 
 public class MainActivity extends Activity implements OnPreparedListener, MediaLayout.MediaPlayerControl {
 	  private static final String TAG = "RecordTaker";
 	  public static final String EXTRA_MESSAGE = "com.watterso.noter.MESSAGE";
-	  private static final String REC_PATH  = Environment.getExternalStorageDirectory().getAbsolutePath()+"/Recordings/";
+	  static final String REC_PATH  = Environment.getExternalStorageDirectory().getAbsolutePath()+"/Recordings/";
 	  public static final String PREFS_NAME = "RecPref";
 	  public static final int RECORD_DIALOG = 1;
 	  public Dialog dialog;
@@ -42,10 +54,16 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
 	  private ListView recordList;
 	  private Handler handler = new Handler();
 	  private DatabaseHandler db;
+	  private int currentTag = 0;
 	  private ArrayList<String> tags;
+	  private ArrayList<String> tags1;
 	  private ArrayList<Entry> entries;
+	  ArrayAdapter<String> spinDapt; 
 	  boolean mExternalStorageAvailable = false;
 	  boolean mExternalStorageWriteable = false;
+	  boolean mBound = false;
+	  Entry recEntry;
+	  AudioIntentService mService;
     @Override
     public void onCreate(Bundle savedInstanceState) {
     	setVolumeControlStream(AudioManager.STREAM_MUSIC);
@@ -60,21 +78,30 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
         if(!firstCheck) firstTime();
        
         db = new DatabaseHandler(this);
-        
         tags = (ArrayList<String>) db.getTags();
-        tags.add(0, "#All");
-        ArrayAdapter<String> spinDapt = new ArrayAdapter<String>(this, R.layout.spin, 
-        				android.R.id.text1,tags );							//Spinner Stuff
+    	Collections.sort(tags);
+        tags1 = new ArrayList<String>();
+        for(String d : tags){
+        	tags1.add("#"+d);
+        }
+        tags1.add(0, "#All");
+        tags.add(0, "All");
+        spinDapt= new ArrayAdapter<String>(this, R.layout.spin, 
+        				android.R.id.text1,tags1);							//Spinner Stuff
         spinDapt.setDropDownViewResource(R.layout.drop);
         ActionBar action = getActionBar();
         action.setNavigationMode(ActionBar.NAVIGATION_MODE_LIST);
         action.setListNavigationCallbacks(spinDapt, new ActionBar.OnNavigationListener() {
 			
 			public boolean onNavigationItemSelected(int itemPosition, long itemId) {
-				if(itemPosition==0)
+				if(itemPosition==0){
 					fillData();
-				else
+				}
+				else{
+					currentTag = itemPosition;
 					fillData(tags.get(itemPosition));
+				}
+				Log.d("Tag #"+currentTag, tags1.get(currentTag).toString());
 				return false;
 			}
 		});
@@ -100,7 +127,9 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
     }
     public void fillData(){
     	entries = (ArrayList<Entry>) db.getAllEntries();
+    	Collections.reverse(entries);					//most recent entries at top
     	ArrayAdapter<Entry> temp = new ArrayAdapter<Entry>(this, R.layout.listitem, entries);
+    	//ArrayAdapter<File> temp = new ArrayAdapter<File>(this, R.layout.listitem, new File(REC_PATH).listFiles());
     	if(!temp.isEmpty()){
     		Log.d("ArrayAdapter", "NOT EMPTY");
     		recordList.setAdapter(temp);
@@ -113,13 +142,14 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
     }
     public void fillData(String tag){
     	entries = (ArrayList<Entry>) db.getAllEntries(tag);
+    	Collections.reverse(entries);					//most recent entries at top
     	ArrayAdapter<Entry> temp = new ArrayAdapter<Entry>(this, 
     			R.layout.listitem, entries);				//for best results, tag should start with a '#'
     	if(!temp.isEmpty()){
-    		Log.d("ArrayAdapter", "NOT EMPTY");
+    		Log.d("ArrayAdapter", "NOT EMPTY("+tags.get(currentTag)+")");
     		recordList.setAdapter(temp);
     	}else{
-    		Log.d("ArrayAdapter", "EMPTY");
+    		Log.d("ArrayAdapter", "EMPTY("+tags.get(currentTag)+")");
     		String [] tempS = {""};
     		ArrayAdapter<String> temp1 = new ArrayAdapter<String>(this,R.layout.listitem, tempS);
     		recordList.setAdapter(temp1);
@@ -146,13 +176,19 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
 			mediaPlayer.reset();
 			if(entries.size()==0) return;
 			audioFile = entries.get(position).getFile();
+			//audioFile = ((TextView)arg1).getText().toString();
 			if(audioFile==null) return;
    	         try {
-   	        	 mediaPlayer.setDataSource(audioFile);
+   	        	 mediaPlayer.setDataSource(REC_PATH+audioFile);
    	        	 mediaPlayer.prepare();
    	        	 mediaPlayer.start();
    	         } catch (IOException e) {
-   	           Log.e(TAG, "Could not open file " + audioFile + " for playback.", e);
+   	           Log.d(TAG, "Could not open file " + audioFile + " for playback.", e);
+   	           CharSequence text = "Could not open file " + audioFile + " for playback.";
+   	           int duration = Toast.LENGTH_SHORT;
+
+   	           Toast toast = Toast.makeText(getApplicationContext(), text, duration);
+   	           toast.show();
    	         }
 			
 		}
@@ -162,40 +198,64 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
         getMenuInflater().inflate(R.menu.activity_main, menu);
         return true;
     }
-    public boolean onOptionsItemSelected(MenuItem item) {
+	public boolean onOptionsItemSelected(MenuItem item) {
     	switch (item.getItemId()) {
     		case R.id.menu_settings:
     			return true;
     		case R.id.menu_record:
+    			if(mediaPlayer.isPlaying()){
+    				mediaPlayer.reset();
+    			}
         		dialog = new Dialog(this);
         		dialog.setOwnerActivity(this);
     			dialog.setContentView(R.layout.activity_record);
     			dialog.setTitle("Make a Recording");
     			dialog.setCanceledOnTouchOutside(false);
     			final ImageButton butt = (ImageButton) dialog.findViewById(R.id.butt);
-    			final ImageButton paus = (ImageButton) dialog.findViewById(R.id.pause);
-    			paus.setImageResource(android.R.drawable.ic_media_pause);
-    			paus.setVisibility(View.GONE);
+    			final EditText top = (EditText)dialog.findViewById(R.id.entryName);
+    			top.setTag(top.getKeyListener());
+    			final AutoCompleteTextView bot = (AutoCompleteTextView) dialog.findViewById(R.id.tagger);
+    			ArrayAdapter<String> copSpin = new ArrayAdapter<String>(this,android.R.layout.simple_list_item_1,android.R.id.text1, tags );
+    			copSpin.setDropDownViewResource(R.layout.drop);
+    			bot.setAdapter(copSpin);
+    			bot.setTag(bot.getKeyListener());
 				butt.setOnClickListener(new View.OnClickListener() {
 					public void onClick(View v) {
 						if(!rec){
+							if(bot.getText().length()==0){
+								CharSequence text = "Please add a tag";
+								int duration = Toast.LENGTH_SHORT;
+
+								Toast toast = Toast.makeText(getApplicationContext(), text, duration);
+								toast.show();
+								return;
+							}
 							butt.setImageResource(R.drawable.ic_butt_stop);
-							paus.setVisibility(View.VISIBLE);
+							top.setKeyListener(null);
+							bot.setKeyListener(null);
 							//begin recording
+							Entry theEntry = new Entry(top.getText().toString(), bot.getText().toString());
+							onRecord(theEntry);
 							rec = true;
 						}else{
 							//save stuff
+							db.addEntry(recEntry);
+							top.setKeyListener((KeyListener)top.getTag());
+							bot.setKeyListener((KeyListener)bot.getTag());
+							mService.stopRecording();
+							unbindService(mConnection);
+				            mBound = false;
 							rec = false;
+							NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);  
+					        mNotificationManager.cancel(AudioIntentService.NOTI_ID);
 							dialog.dismiss();
+							updateScroll();
+							if(currentTag!=0){
+								fillData(tags.get(currentTag));
+							}else{
+								fillData();
+							}
 						}
-					}
-			    });
-				paus.setOnClickListener(new View.OnClickListener() {
-					public void onClick(View v) {
-						//pause recording
-						rec=false;
-		    			paus.setVisibility(View.GONE);
-		    			butt.setImageResource(R.drawable.ic_butt_record);
 					}
 			    });
     			dialog.show();
@@ -206,6 +266,40 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
     	}
     	
     }
+    private void updateScroll(){
+    	tags = (ArrayList<String>) db.getTags();
+    	Collections.sort(tags);
+        tags1 = new ArrayList<String>();
+        for(String d : tags){
+        	tags1.add("#"+d);
+        }
+        tags1.add(0, "#All");
+        tags.add(0, "All");
+        spinDapt.clear();
+        spinDapt.addAll(tags1);
+    	
+    }
+    private void onRecord(Entry theEntry){
+    	recEntry = theEntry;
+    	Intent intent = new Intent(this, AudioIntentService.class);
+    	intent.putExtra(EXTRA_MESSAGE, theEntry.getFile());
+		bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+    }
+    private ServiceConnection mConnection = new ServiceConnection() {
+
+        public void onServiceConnected(ComponentName className,
+                IBinder service) {
+            // We've bound to service, cast the IBinder and get service instance
+            AudioBinder binder = (AudioBinder) service;
+            mService = binder.getService();
+            mService.startRecording();
+            mBound = true;
+        }
+
+        public void onServiceDisconnected(ComponentName arg0) {
+            mBound = false;
+        }
+    };
     protected void onStart(){
   	  super.onStart();
   	  this.onCreate(saveThisInstance);  
@@ -218,8 +312,6 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
     }
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-      //the MediaController will hide after 3 seconds - tap the screen to make it appear again
-      mediaController.show();
       return false;
     }
     //--MediaPlayerControl methods----------------------------------------------------
@@ -271,7 +363,7 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
       handler.post(new Runnable() {
         public void run() {
         	mediaController.setEnabled(true);
-        	mediaController.show();
+        	mediaController.updateSeek();
         }
       });
     }

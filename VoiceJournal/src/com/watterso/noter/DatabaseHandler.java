@@ -9,9 +9,10 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.util.Log;
 
 public class DatabaseHandler extends SQLiteOpenHelper {
-	private static final int DATABASE_VERSION = 1;
+	private static final int DATABASE_VERSION = 4;
  
     // Database Name
     private static final String DATABASE_NAME = "entryManager";
@@ -35,7 +36,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
 	public void onCreate(SQLiteDatabase arg0) {
 		String CREATE_CONTACTS_TABLE = "CREATE TABLE " + TABLE_ENTRY + "("
                 + KEY_ID + " INTEGER PRIMARY KEY," + KEY_NAME + " TEXT,"
-                + KEY_TAG + " TEXT" + KEY_FILE + " TEXT" + KEY_TIME + " TEXT"+")";
+                + KEY_TAG + " TEXT," + KEY_FILE + " TEXT," + KEY_TIME + " TEXT"+")";
         arg0.execSQL(CREATE_CONTACTS_TABLE);
 
 	}
@@ -83,7 +84,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
 		List<Entry> temp = getAllEntries();
 		List<String> ret = new ArrayList<String>();
 		for(Entry ent: temp){
-			ret.add("#"+ent.getTag());
+			ret.add(ent.getTag());
 		}
 		HashSet<String> hash = new HashSet<String>();
 		hash.addAll(ret);
@@ -92,8 +93,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
 		return ret;
 	}
 	public List<Entry> getAllEntries(String tag){			//given a tag with a '#' in front of it return matching entries
-		if(tag.charAt(0)=='#')
-			tag = tag.substring(1);								//Get rid of '#'
+		//tag = tag.substring(1);								//Get rid of '#'
 		List<Entry> entryList = new ArrayList<Entry>();
 	    // Select All Query
 	    String selectQuery = "SELECT  * FROM " + TABLE_ENTRY;
@@ -104,7 +104,8 @@ public class DatabaseHandler extends SQLiteOpenHelper {
 	    // looping through all rows and adding to list
 	    if (cursor.moveToFirst()) {
 	        do {
-	        	if(cursor.getString(2)==tag){
+	        	if(cursor.getString(2).equals(tag)){
+	        		//Log.d("tag match:",cursor.getString(2)+"=="+tag);
 	        		Entry entry = new Entry();
 	        		entry.setID(Integer.parseInt(cursor.getString(0)));
 	        		entry.setName(cursor.getString(1));
@@ -112,6 +113,8 @@ public class DatabaseHandler extends SQLiteOpenHelper {
 	        		entry.setFile(cursor.getString(3));
 	        		entry.setTime(cursor.getString(4));
 	        		entryList.add(entry);
+	        	}else{
+	        		//Log.d("no tag match:",cursor.getString(2)+"=\\="+tag);
 	        	}
 	        } while (cursor.moveToNext());
 	    }
@@ -160,7 +163,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
 	    return db.update(TABLE_ENTRY, values, KEY_ID + " = ?",
 	            new String[] { String.valueOf(entry.getID()) });
 	}
-	public void deleteContact(Entry entry) {
+	public void deleteEntry(Entry entry) {
 		SQLiteDatabase db = this.getWritableDatabase();
 	    db.delete(TABLE_ENTRY, KEY_ID + " = ?",
 	            new String[] { String.valueOf(entry.getID()) });
