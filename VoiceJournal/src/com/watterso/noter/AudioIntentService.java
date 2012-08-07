@@ -1,6 +1,5 @@
 package com.watterso.noter;
 
-import java.io.IOException;
 import java.util.Formatter;
 import java.util.Locale;
 import java.util.Timer;
@@ -8,11 +7,11 @@ import java.util.TimerTask;
 
 import android.app.IntentService;
 import android.app.Notification;
-import android.app.NotificationManager;
-import android.content.Context;
+import android.app.PendingIntent;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.media.MediaPlayer;
 import android.media.MediaRecorder;
 import android.os.Binder;
 import android.os.Handler;
@@ -22,16 +21,21 @@ import android.util.Log;
 
 public class AudioIntentService extends IntentService {
 	private MediaRecorder mRecorder;
+	private MediaPlayer mPlayer;
+	private boolean isBackground = false;
 	private String time;
 	private final IBinder mBinder = new AudioBinder();
 	final static int NOTI_ID = 5;
-	private String mFileName;
-	StringBuilder mFormatBuilder = new StringBuilder();
-    Formatter mFormatter = new Formatter(mFormatBuilder, Locale.getDefault());
+	private StringBuilder mFormatBuilder = new StringBuilder();
+	private Formatter mFormatter = new Formatter(mFormatBuilder, Locale.getDefault());
     private long starttime;
-    Timer timer;
-    Bitmap aBitmap;
-    Notification noti;
+    private Timer timer;
+    private Bitmap rBitmap;
+    private Bitmap pBitmap;
+    private Notification noti;
+    private Intent recieved;
+    private Entry notiEntry;
+    private int curPlay = -1;
 	final Handler h = new Handler() {
         @Override
         public void handleMessage(Message msg) {
@@ -48,22 +52,64 @@ public class AudioIntentService extends IntentService {
            }
         }
     };
-    class timeTask extends TimerTask {
+    class recordTask extends TimerTask {
         @Override
         public void run() {
             h.sendEmptyMessage(0);
+            Intent intented = new Intent(getApplicationContext(), MainActivity.class);
+            intented.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
             noti = new Notification.Builder(getApplicationContext())
-            .setContentTitle("Recording to " + mFileName)
+            .setContentTitle("Recording: "+notiEntry.getName())
             .setContentText(time)
             .setSmallIcon(R.drawable.ic_butt_record)
-            .setLargeIcon(aBitmap)
+            .setLargeIcon(rBitmap)
+            .setContentIntent(PendingIntent.getActivity(getApplicationContext(), 0, intented, PendingIntent.FLAG_CANCEL_CURRENT))
             .build();
-            NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);  
-            mNotificationManager.notify(NOTI_ID, noti);
+            if(isBackground)	{
+            									//confusing wording, if you are not looking at 
+            	startForeground(NOTI_ID, noti); //MainActivity, show the notification
+            	//Log.d("RECORD NOTE", "IS SHOWING");
+            }else{
+            	stopForeground(true);
+            	//Log.d("RECORD NOTE", "CLEARED");
+            }
         }
    };
+   class playTask extends TimerTask {
+       @Override
+       public void run() {
+    	   int totalSeconds = mPlayer.getCurrentPosition() / 1000;
+
+           int seconds = totalSeconds % 60;
+           int minutes = (totalSeconds / 60) % 60;
+           int hours   = totalSeconds / 3600;
+
+           mFormatBuilder.setLength(0);
+           if (hours > 0) {
+               time = mFormatter.format("%d:%02d:%02d", hours, minutes, seconds).toString();
+           } else {
+               time = mFormatter.format("%02d:%02d", minutes, seconds).toString();
+           }
+           Intent intented = new Intent(getApplicationContext(), MainActivity.class);
+           intented.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+           noti = new Notification.Builder(getApplicationContext())
+           .setContentTitle("Playing: "+notiEntry.getName())
+           .setContentText(time)
+           .setSmallIcon(android.R.drawable.ic_lock_silent_mode_off)
+           .setLargeIcon(pBitmap)
+           .setContentIntent(PendingIntent.getActivity(getApplicationContext(), 0, intented, PendingIntent.FLAG_CANCEL_CURRENT))
+           .build();
+           if(isBackground&&mPlayer.isPlaying())	{				//confusing wording, if you are not looking at 
+           	startForeground(NOTI_ID, noti); //MainActivity, show the notification
+           }else{
+           	stopForeground(true);
+           }
+       }
+  };
 	
-	
+	public void setBackground(boolean yesno){
+		isBackground = yesno;
+	}
 	public AudioIntentService() {
 		super("thisemptyholmes");
 		//empty construct necessitated by error
@@ -80,7 +126,7 @@ public class AudioIntentService extends IntentService {
 
 	@Override
     public IBinder onBind(Intent intent) {
-		mFileName = intent.getStringExtra(MainActivity.EXTRA_MESSAGE);
+		recieved = intent;
         return mBinder;
     }
 
@@ -89,36 +135,43 @@ public class AudioIntentService extends IntentService {
 		Log.d("big friends", "intent handled");
 		
 	}
-	public void startRecording(){ 
+	public MediaPlayer getPlayer(){
+		mPlayer = new MediaPlayer();
+		return mPlayer;
+	}
+	public MediaRecorder getRecorder(){
 		mRecorder = new MediaRecorder();
         mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-        mRecorder.setOutputFile(MainActivity.REC_PATH+mFileName);
         mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
-        try {
-            mRecorder.prepare();
-        } catch (IOException e) {
-            Log.e("Mic Stuff", "prepare() failed");
-        }
-        mRecorder.start();
-        timer = new Timer();
-        timer.schedule(new timeTask(), 0, 500);
-        starttime = System.currentTimeMillis();
-        aBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.record_buton);
-        noti = new Notification.Builder(this)
-        .setContentTitle("Recording to " + mFileName)
-        .setContentText(time)
-        .setSmallIcon(R.drawable.ic_butt_record)
-        .setLargeIcon(aBitmap)
-        .build();
-        startForeground(NOTI_ID, noti);
+        return mRecorder;
 	}
-	public void stopRecording() {
+	public void startedPlaying(Entry ent){
+		notiEntry = ent;
+		timer = new Timer();
+        timer.schedule(new playTask(), 0, 500);
+        starttime = System.currentTimeMillis();
+        pBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.ic_launcher);
+	}
+	public void startedRecording(Entry ent){
+		notiEntry = ent;
+        timer = new Timer();
+		Log.d("service", "timer made");
+        timer.schedule(new recordTask(), 0, 500);
+		Log.d("service", "scheduled");
+        starttime = System.currentTimeMillis();
+        rBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.ic_launcher);
+	}
+	public void stoppedRecording() {
 		timer.cancel();
-		NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);  
-        mNotificationManager.cancel(NOTI_ID);
         mRecorder.stop();
         mRecorder.release();
         mRecorder = null;
     }
+	public int getPlaying(){
+		return curPlay;
+	}
+	public void setPlaying(int i){				//doesn't actually set whats playing, just for listview filter
+		curPlay = i;
+	}
 }

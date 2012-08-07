@@ -5,19 +5,21 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 
-import android.annotation.SuppressLint;
 import android.app.ActionBar;
 import android.app.Activity;
 import android.app.Dialog;
-import android.app.NotificationManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.graphics.Color;
+import android.graphics.PorterDuff;
+import android.graphics.drawable.Drawable;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnPreparedListener;
+import android.media.MediaRecorder;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -49,11 +51,12 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
 	  public boolean rec = false;
 	  public MediaPlayer mediaPlayer;
 	  private MediaLayout mediaController;
+	  private MediaRecorder mRecorder;
 	  private String audioFile;
 	  private Bundle saveThisInstance;
 	  private ListView recordList;
 	  private Handler handler = new Handler();
-	  private DatabaseHandler db;
+	  private Context mContext;
 	  private int currentTag = 0;
 	  private ArrayList<String> tags;
 	  private ArrayList<String> tags1;
@@ -76,8 +79,8 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
         SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
         boolean firstCheck = settings.getBoolean("first", false);	//Logically confusing but works better if false means its first time
         if(!firstCheck) firstTime();
-       
-        db = new DatabaseHandler(this);
+        mContext = this;
+        DatabaseHandler db = new DatabaseHandler(this);
         tags = (ArrayList<String>) db.getTags();
     	Collections.sort(tags);
         tags1 = new ArrayList<String>();
@@ -110,9 +113,17 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
         fillData();																		//ListView Populate
         recordList.setOnItemClickListener(mClickListener);
         
-        mediaPlayer = new MediaPlayer();
-        mediaPlayer.setOnPreparedListener(this);
-        mediaController = (MediaLayout)findViewById(R.id.controller);        
+        Intent intent = new Intent(this, AudioIntentService.class);
+		bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+		Log.d("Bound the", "Service");
+        mediaController = (MediaLayout)findViewById(R.id.controller);
+        if(mediaPlayer!=null && mediaPlayer.isPlaying()){
+        	Log.d("Media Player", "Was Playing");
+        	mediaController.setMediaPlayer(this);
+        	mediaController.updateSeek();
+        	
+        }
+        db.close();
     }
     public void firstTime(){
     	if(mExternalStorageWriteable){
@@ -126,9 +137,10 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
     	}
     }
     public void fillData(){
+    	DatabaseHandler db = new DatabaseHandler(this);
     	entries = (ArrayList<Entry>) db.getAllEntries();
     	Collections.reverse(entries);					//most recent entries at top
-    	ArrayAdapter<Entry> temp = new ArrayAdapter<Entry>(this, R.layout.listitem, entries);
+    	CustomArrayAdapter temp = new CustomArrayAdapter(this, R.layout.listitem, entries);
     	//ArrayAdapter<File> temp = new ArrayAdapter<File>(this, R.layout.listitem, new File(REC_PATH).listFiles());
     	if(!temp.isEmpty()){
     		Log.d("ArrayAdapter", "NOT EMPTY");
@@ -139,11 +151,13 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
     		ArrayAdapter<String> temp1 = new ArrayAdapter<String>(this,R.layout.listitem, tempS);
     		recordList.setAdapter(temp1);
     	}
+    	db.close();
     }
     public void fillData(String tag){
+    	DatabaseHandler db = new DatabaseHandler(this);
     	entries = (ArrayList<Entry>) db.getAllEntries(tag);
     	Collections.reverse(entries);					//most recent entries at top
-    	ArrayAdapter<Entry> temp = new ArrayAdapter<Entry>(this, 
+    	CustomArrayAdapter temp = new CustomArrayAdapter(this, 
     			R.layout.listitem, entries);				//for best results, tag should start with a '#'
     	if(!temp.isEmpty()){
     		Log.d("ArrayAdapter", "NOT EMPTY("+tags.get(currentTag)+")");
@@ -154,6 +168,7 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
     		ArrayAdapter<String> temp1 = new ArrayAdapter<String>(this,R.layout.listitem, tempS);
     		recordList.setAdapter(temp1);
     	}
+    	db.close();
     }
     public void checkStorage(){
     	String state = Environment.getExternalStorageState();
@@ -174,23 +189,23 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
 		  
 		public void onItemClick(AdapterView<?> arg0, View arg1, int position, long arg3) {
 			mediaPlayer.reset();
+			CustomArrayAdapter tempC = (CustomArrayAdapter)recordList.getAdapter();
+			Log.d("SERVICE SAYS","#"+mService.getPlaying()+" was playing");
+			if(mService.getPlaying()!=-1){
+				View tempV = tempC.getView(mService.getPlaying(), null, recordList);
+				Drawable back1  = tempV.getBackground();
+				back1.setColorFilter(null);
+			}
+			tempC.setShaded(position);
+			Drawable back = arg1.getBackground();
+        	back.mutate().setColorFilter(Color.LTGRAY, PorterDuff.Mode.MULTIPLY);
+        	recordList.invalidateViews();
+			mService.setPlaying(position);
 			if(entries.size()==0) return;
 			audioFile = entries.get(position).getFile();
 			//audioFile = ((TextView)arg1).getText().toString();
 			if(audioFile==null) return;
-   	         try {
-   	        	 mediaPlayer.setDataSource(REC_PATH+audioFile);
-   	        	 mediaPlayer.prepare();
-   	        	 mediaPlayer.start();
-   	         } catch (IOException e) {
-   	           Log.d(TAG, "Could not open file " + audioFile + " for playback.", e);
-   	           CharSequence text = "Could not open file " + audioFile + " for playback.";
-   	           int duration = Toast.LENGTH_SHORT;
-
-   	           Toast toast = Toast.makeText(getApplicationContext(), text, duration);
-   	           toast.show();
-   	         }
-			
+			onPlay(entries.get(position));
 		}
       	};
     @Override
@@ -231,24 +246,28 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
 								return;
 							}
 							butt.setImageResource(R.drawable.ic_butt_stop);
+							Log.d("Recording", "butt changed");
 							top.setKeyListener(null);
 							bot.setKeyListener(null);
+							Log.d("Recording", "listeners gone");
 							//begin recording
+							mRecorder = mService.getRecorder();
 							Entry theEntry = new Entry(top.getText().toString(), bot.getText().toString());
+							Log.d("Recording", "entry made");
 							onRecord(theEntry);
+							Log.d("Recording", "onRecord hapened");
 							rec = true;
 						}else{
 							//save stuff
+							DatabaseHandler db = new DatabaseHandler(mContext);
 							db.addEntry(recEntry);
 							top.setKeyListener((KeyListener)top.getTag());
 							bot.setKeyListener((KeyListener)bot.getTag());
-							mService.stopRecording();
-							unbindService(mConnection);
-				            mBound = false;
+							mService.stoppedRecording();
+							mRecorder = null;
 							rec = false;
-							NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);  
-					        mNotificationManager.cancel(AudioIntentService.NOTI_ID);
 							dialog.dismiss();
+							db.close();
 							updateScroll();
 							if(currentTag!=0){
 								fillData(tags.get(currentTag));
@@ -267,6 +286,7 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
     	
     }
     private void updateScroll(){
+    	DatabaseHandler db = new DatabaseHandler(mContext);
     	tags = (ArrayList<String>) db.getTags();
     	Collections.sort(tags);
         tags1 = new ArrayList<String>();
@@ -277,22 +297,58 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
         tags.add(0, "All");
         spinDapt.clear();
         spinDapt.addAll(tags1);
+        db.close();
     	
     }
     private void onRecord(Entry theEntry){
-    	recEntry = theEntry;
-    	Intent intent = new Intent(this, AudioIntentService.class);
-    	intent.putExtra(EXTRA_MESSAGE, theEntry.getFile());
-		bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+    	if(mRecorder!=null){
+    		recEntry = theEntry;
+			Log.d("onRecord", "entry set");
+    		mRecorder.setOutputFile(MainActivity.REC_PATH+theEntry._fileName);
+			Log.d("onRecord", "output file set");
+    		try {
+    			Log.d("onRecord", "trying to prepare");
+    			mRecorder.prepare();
+    		} catch (IOException e) {
+    			Log.e("Mic Stuff", "prepare() failed");
+    		}
+    		Log.d("onREcord","mRecorder Prepared");
+    		mService.startedRecording(theEntry);
+			Log.d("onRecord", "service started recording");
+    		mRecorder.start();
+			Log.d("onRecord", "mrecorder started");
+    		
+         }
+    }
+    private void onPlay(Entry ent){
+        if(mediaPlayer!=null){
+        	mediaPlayer.reset();
+        	try {
+        		mediaPlayer.setDataSource(REC_PATH+audioFile);
+        		mediaPlayer.prepare();
+        		mediaPlayer.start();
+        		mService.startedPlaying(ent);
+        	} catch (IOException e) {
+        		Log.d(TAG, "Could not open file " + audioFile + " for playback.", e);
+        		CharSequence text = "Could not open file " + audioFile + " for playback.";
+        		int duration = Toast.LENGTH_SHORT;
+
+        		Toast toast = Toast.makeText(getApplicationContext(), text, duration);
+        		toast.show();
+        	}
+        }
     }
     private ServiceConnection mConnection = new ServiceConnection() {
 
         public void onServiceConnected(ComponentName className,
                 IBinder service) {
             // We've bound to service, cast the IBinder and get service instance
+        	Log.d("Connected to", "Service");
             AudioBinder binder = (AudioBinder) service;
             mService = binder.getService();
-            mService.startRecording();
+            mediaPlayer = mService.getPlayer();
+            addPrepListener();
+            mRecorder = mService.getRecorder();
             mBound = true;
         }
 
@@ -300,15 +356,21 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
             mBound = false;
         }
     };
+    private void addPrepListener(){
+    	mediaPlayer.setOnPreparedListener(this);
+    }
     protected void onStart(){
   	  super.onStart();
-  	  this.onCreate(saveThisInstance);  
+  	  if(mService!=null)
+  		  mService.setBackground(false);
+  	  //this.onCreate(saveThisInstance);			OH GOD WHY?!?!! NEVER EVER do this!! DUMMY!
     }
     @Override
     protected void onStop() {
       super.onStop();
-      mediaPlayer.stop();
-      mediaPlayer.release();
+      mService.setBackground(true);
+      //mediaPlayer.stop();
+      //mediaPlayer.release();
     }
     @Override
     public boolean onTouchEvent(MotionEvent event) {
@@ -355,7 +417,6 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
       return true;
     }
     //--------------------------------------------------------------------------------
-
     public void onPrepared(MediaPlayer mediaPlayer) {
       Log.d(TAG, "onPrepared");
       mediaController.setMediaPlayer(this);

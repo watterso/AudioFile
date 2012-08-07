@@ -6,14 +6,14 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
 
+import android.util.Log;
+
 public class Entry {
 	int _id;
 	String _name;
 	String _tag;
 	Date _timeStamp;
 	String _fileName;
-	
-	
 	public Entry(){
 		
 	}
@@ -26,6 +26,7 @@ public class Entry {
 		SimpleDateFormat ad =new SimpleDateFormat(format);
 		try {
 			this._timeStamp = ad.parse(time);
+			Log.d("TimeStamp", "Set");
 		} catch (ParseException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -55,6 +56,16 @@ public class Entry {
     public void setFile(String file){
         this._fileName = file;
     }
+    public String getFormattedTime(){
+    	String format =  "MMM dd";
+    	Calendar now = Calendar.getInstance();
+    	Calendar then = new GregorianCalendar();
+    	then.setTime(this._timeStamp);
+    	if(then.get(Calendar.YEAR)<now.get(Calendar.YEAR))
+    		format = "MMM dd yyyy";
+		SimpleDateFormat ad =new SimpleDateFormat(format);
+        return this._timeStamp!=null ?ad.format(this._timeStamp) : "DATE ERROR";
+    }
     public String getTime(){
     	String format = "MMM dd yyyy";
 		SimpleDateFormat ad =new SimpleDateFormat(format);
@@ -83,15 +94,8 @@ public class Entry {
         this._tag = tag;
     }
     public String toString(){
-    	String format =  "MMM dd";
-    	Calendar now = Calendar.getInstance();
-    	Calendar then = new GregorianCalendar();
-    	then.setTime(this._timeStamp);
-    	if(then.get(Calendar.YEAR)<now.get(Calendar.YEAR))
-    		format = "MMM dd yyyy";
-		SimpleDateFormat ad =new SimpleDateFormat(format);
 		
-    	return this._name+" #"+this._tag+" "+ad.format(this._timeStamp);
+    	return this._name+" #"+this._tag+" "+this.getFormattedTime();
     }
 
 }

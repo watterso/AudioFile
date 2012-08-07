@@ -7,7 +7,6 @@ import android.content.Context;
 import android.os.Handler;
 import android.os.Message;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
@@ -15,8 +14,8 @@ import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.SeekBar;
-import android.widget.TextView;
 import android.widget.SeekBar.OnSeekBarChangeListener;
+import android.widget.TextView;
 
 public class MediaLayout extends LinearLayout {
 	private MediaPlayerControl  mPlayer;
@@ -25,21 +24,13 @@ public class MediaLayout extends LinearLayout {
     private boolean             mDragging;
     private static final int    FADE_OUT = 1;
     private static final int    SHOW_PROGRESS = 2;
-    private boolean             mUseFastForward;
-    private boolean             mFromXml;
-    private View.OnClickListener mNextListener, mPrevListener;
     StringBuilder               mFormatBuilder;
     Formatter                   mFormatter;
     private ImageButton         mPauseButton;
-    private ImageButton         mFfwdButton;
-    private ImageButton         mRewButton;
-    private ImageButton         mNextButton;
-    private ImageButton         mPrevButton;
 
 	public MediaLayout(Context context, AttributeSet attrs) {
 		super(context, attrs);
 		inflate(context, R.layout.media_controller, this);
-		mUseFastForward = true;
 	}
 	public MediaLayout(Context context) {
 		super(context);
@@ -56,31 +47,10 @@ public class MediaLayout extends LinearLayout {
     private void initControllerView(View v) {
         mPauseButton = (ImageButton) v.findViewById(com.watterso.noter.R.id.pause);
         if (mPauseButton != null) {
+        	mPauseButton.setImageResource(android.R.drawable.ic_media_play);
             mPauseButton.requestFocus();
             mPauseButton.setOnClickListener(mPauseListener);
         }
-
-        mFfwdButton = (ImageButton) v.findViewById(com.watterso.noter.R.id.ffwd);
-        if (mFfwdButton != null) {
-            mFfwdButton.setOnClickListener(mFfwdListener);
-            if (!mFromXml) {
-                mFfwdButton.setVisibility(mUseFastForward ? View.VISIBLE : View.GONE);
-            }
-        }
-
-        mRewButton = (ImageButton) v.findViewById(com.watterso.noter.R.id.rew);
-        if (mRewButton != null) {
-            mRewButton.setOnClickListener(mRewListener);
-            if (!mFromXml) {
-                mRewButton.setVisibility(mUseFastForward ? View.VISIBLE : View.GONE);
-            }
-        }
-
-        // By default these are hidden. They will be enabled when setPrevNextListeners() is called 
-        mNextButton = (ImageButton) v.findViewById(com.watterso.noter.R.id.next);
-        mNextButton.setVisibility(View.GONE);
-        mPrevButton = (ImageButton) v.findViewById(com.watterso.noter.R.id.prev);
-        mPrevButton.setVisibility(View.GONE);
 
         mProgress = (ProgressBar) v.findViewById(com.watterso.noter.R.id.mediacontroller_progress);
         if (mProgress != null) {
@@ -91,12 +61,9 @@ public class MediaLayout extends LinearLayout {
             mProgress.setMax(1000);
         }
 
-        mEndTime = (TextView) v.findViewById(com.watterso.noter.R.id.time);
         mCurrentTime = (TextView) v.findViewById(com.watterso.noter.R.id.time_current);
         mFormatBuilder = new StringBuilder();
         mFormatter = new Formatter(mFormatBuilder, Locale.getDefault());
-
-        installPrevNextListeners();
     }
 
     private Handler mHandler = new Handler() {
@@ -112,6 +79,8 @@ public class MediaLayout extends LinearLayout {
                     		msg = obtainMessage(SHOW_PROGRESS);
                     		setProgress();							//This updates the seek bar
                     		sendMessageDelayed(msg, 1000);
+                    	}else{
+                        	updatePausePlay();
                     	}
                     }
 				break;
@@ -267,73 +236,11 @@ public class MediaLayout extends LinearLayout {
         if (mPauseButton != null) {
             mPauseButton.setEnabled(enabled);
         }
-        if (mFfwdButton != null) {
-            mFfwdButton.setEnabled(enabled);
-        }
-        if (mRewButton != null) {
-            mRewButton.setEnabled(enabled);
-        }
-        if (mNextButton != null) {
-            //mNextButton.setEnabled(enabled && mNextListener != null);
-        }
-        if (mPrevButton != null) {
-            //mPrevButton.setEnabled(enabled && mPrevListener != null);
-        }
         if (mProgress != null) {
             mProgress.setEnabled(enabled);
         }
 
         super.setEnabled(enabled);
-    }
-
-    private View.OnClickListener mRewListener = new View.OnClickListener() {
-        public void onClick(View v) {
-        	if(mPlayer!=null){
-        		int pos = mPlayer.getCurrentPosition();
-        		pos -= 5000; // milliseconds
-        		mPlayer.seekTo(pos);
-        		setProgress();
-        	}
-        }
-    };
-
-    private View.OnClickListener mFfwdListener = new View.OnClickListener() {
-        public void onClick(View v) {
-        	if(mPlayer!=null){
-        		int pos = mPlayer.getCurrentPosition();
-        		pos += 15000; // milliseconds
-        		mPlayer.seekTo(pos);
-        		setProgress();
-        	}
-        }
-    };
-
-    private void installPrevNextListeners() {
-        if (mNextButton != null) {
-            //mNextButton.setOnClickListener(mNextListener);
-            //mNextButton.setEnabled(mNextListener != null);
-        }
-
-        if (mPrevButton != null) {
-            //mPrevButton.setOnClickListener(mPrevListener);
-            //mPrevButton.setEnabled(mPrevListener != null);
-        }
-    }
-
-    public void setPrevNextListeners(View.OnClickListener next, View.OnClickListener prev) {
-        mNextListener = next;
-        mPrevListener = prev;
-
-        
-        installPrevNextListeners();
-
-        if (mNextButton != null && !mFromXml) {
-        	//mNextButton.setVisibility(View.VISIBLE);
-        }
-        if (mPrevButton != null && !mFromXml) {
-        	//mPrevButton.setVisibility(View.VISIBLE);
-        }
-        
     }
 
     public interface MediaPlayerControl {

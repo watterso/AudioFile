@@ -1,12 +1,10 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:id="@+id/menu_record"
         android:icon="@drawable/ic_action_record"
-        android:title="@string/menu_settings"
         android:orderInCategory="100"
         android:showAsAction="ifRoom"/>
     <item android:id="@+id/menu_settings"
         android:icon="@drawable/ic_action_seti"
-        android:title="@string/menu_settings"
         android:orderInCategory="100"
         android:showAsAction="always"/>
 </menu>
