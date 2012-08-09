@@ -10,6 +10,7 @@ import android.app.Activity;
 import android.app.Dialog;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
@@ -24,16 +25,20 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Vibrator;
 import android.text.method.KeyListener;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
+import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ListView;
@@ -44,7 +49,6 @@ import com.watterso.noter.AudioIntentService.AudioBinder;
 public class MainActivity extends Activity implements OnPreparedListener, MediaLayout.MediaPlayerControl {
 	  private static final String TAG = "RecordTaker";
 	  public static final String EXTRA_MESSAGE = "com.watterso.noter.MESSAGE";
-	  static final String REC_PATH  = Environment.getExternalStorageDirectory().getAbsolutePath()+"/Recordings/";
 	  public static final String PREFS_NAME = "RecPref";
 	  public static final int RECORD_DIALOG = 1;
 	  public Dialog dialog;
@@ -112,6 +116,7 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
         recordList= (ListView) findViewById(R.id.recordings);
         fillData();																		//ListView Populate
         recordList.setOnItemClickListener(mClickListener);
+        recordList.setOnItemLongClickListener(mLongListener);
         
         Intent intent = new Intent(this, AudioIntentService.class);
 		bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
@@ -127,8 +132,8 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
     }
     public void firstTime(){
     	if(mExternalStorageWriteable){
-    		File newDir = new File(Environment.getExternalStorageDirectory(), "Recordings");
-    		newDir.mkdir();
+    		ContextWrapper cw = new ContextWrapper(this);
+    		File newDir = cw.getDir("Recordings", Context.MODE_WORLD_READABLE);
 
     		SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
     		SharedPreferences.Editor editor = settings.edit();
@@ -185,9 +190,70 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
     	    mExternalStorageAvailable = mExternalStorageWriteable = false;
     	}
     }
+    public OnItemLongClickListener mLongListener = new OnItemLongClickListener(){
+
+		public boolean onItemLongClick(AdapterView<?> arg0, View arg1, int arg2, long arg3) {
+			Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+			vibrator.vibrate(50);
+			showEditDialog(arg2);
+			return false;
+		}
+    	
+    };
+    public void showEditDialog(int entNum){
+    	final Entry editing = entries.get(entNum);
+    	final Dialog dialog1 = new Dialog(this);
+		dialog1.setOwnerActivity(this);
+		dialog1.setContentView(R.layout.edit_popup);
+		dialog1.setTitle("Edit an Entry");
+		dialog1.setCanceledOnTouchOutside(false);
+		dialog1.show();
+		final EditText top = (EditText)dialog1.findViewById(R.id.entryNameEdit);
+		top.setText(editing.getName());
+		final AutoCompleteTextView bot = (AutoCompleteTextView) dialog1.findViewById(R.id.taggerEdit);
+		ArrayAdapter<String> copSpin = new ArrayAdapter<String>(this,android.R.layout.simple_list_item_1,android.R.id.text1, tags );
+		copSpin.setDropDownViewResource(R.layout.drop);
+		bot.setAdapter(copSpin);
+		bot.setText(editing.getTag());
+		Button cancel =(Button)dialog1.findViewById(R.id.cancel);
+		cancel.setOnClickListener(new OnClickListener() {
+			public void onClick(View v) {
+				dialog1.dismiss();
+			}
+		});
+		Button okay = (Button)dialog1.findViewById(R.id.okay);
+		okay.setOnClickListener(new OnClickListener() {
+			public void onClick(View v) {
+				editing.setName(top.getText().toString());
+				editing.setTag(bot.getText().toString());
+				DatabaseHandler db = new DatabaseHandler(mContext);
+				db.updateEntry(editing);
+				db.close();
+				dialog1.dismiss();
+				updateScroll();
+				refreshList();
+			}
+		});
+		Button delete = (Button)dialog1.findViewById(R.id.delete);
+		delete.setOnClickListener(new OnClickListener() {
+			public void onClick(View v) {
+				DatabaseHandler db = new DatabaseHandler(mContext);
+				db.deleteEntry(editing);
+				db.close();
+				ContextWrapper cw = new ContextWrapper(mContext);
+				File file = new File(cw.getDir("Recordings", Context.MODE_WORLD_READABLE).getPath()+editing.getFile());
+				file.delete();
+				updateScroll();
+				refreshList();
+				dialog1.dismiss();
+			}
+		});
+    }
     public OnItemClickListener mClickListener = new OnItemClickListener() {
 		  
 		public void onItemClick(AdapterView<?> arg0, View arg1, int position, long arg3) {
+			Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+			vibrator.vibrate(50);
 			mediaPlayer.reset();
 			CustomArrayAdapter tempC = (CustomArrayAdapter)recordList.getAdapter();
 			Log.d("SERVICE SAYS","#"+mService.getPlaying()+" was playing");
@@ -237,6 +303,14 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
 				butt.setOnClickListener(new View.OnClickListener() {
 					public void onClick(View v) {
 						if(!rec){
+							if(top.getText().length()==0){
+								CharSequence text = "Please title this entry";
+								int duration = Toast.LENGTH_SHORT;
+
+								Toast toast = Toast.makeText(getApplicationContext(), text, duration);
+								toast.show();
+								return;
+							}
 							if(bot.getText().length()==0){
 								CharSequence text = "Please add a tag";
 								int duration = Toast.LENGTH_SHORT;
@@ -269,11 +343,7 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
 							dialog.dismiss();
 							db.close();
 							updateScroll();
-							if(currentTag!=0){
-								fillData(tags.get(currentTag));
-							}else{
-								fillData();
-							}
+							refreshList();
 						}
 					}
 			    });
@@ -304,7 +374,8 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
     	if(mRecorder!=null){
     		recEntry = theEntry;
 			Log.d("onRecord", "entry set");
-    		mRecorder.setOutputFile(MainActivity.REC_PATH+theEntry._fileName);
+			ContextWrapper cw = new ContextWrapper(mContext);
+    		mRecorder.setOutputFile(cw.getDir("Recordings", Context.MODE_WORLD_READABLE)+theEntry.getFile());
 			Log.d("onRecord", "output file set");
     		try {
     			Log.d("onRecord", "trying to prepare");
@@ -324,7 +395,8 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
         if(mediaPlayer!=null){
         	mediaPlayer.reset();
         	try {
-        		mediaPlayer.setDataSource(REC_PATH+audioFile);
+				ContextWrapper cw = new ContextWrapper(mContext);
+        		mediaPlayer.setDataSource(cw.getDir("Recordings", Context.MODE_WORLD_READABLE)+audioFile);
         		mediaPlayer.prepare();
         		mediaPlayer.start();
         		mService.startedPlaying(ent);
@@ -417,6 +489,13 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
       return true;
     }
     //--------------------------------------------------------------------------------
+    public void refreshList(){
+    	if(currentTag!=0){
+			fillData(tags.get(currentTag));
+		}else{
+			fillData();
+		}
+    }
     public void onPrepared(MediaPlayer mediaPlayer) {
       Log.d(TAG, "onPrepared");
       mediaController.setMediaPlayer(this);
