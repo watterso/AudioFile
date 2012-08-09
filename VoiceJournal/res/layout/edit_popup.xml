@@ -1,0 +1,77 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical" >
+
+    <TextView
+        android:id="@+id/entryLabelEdit"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="@dimen/padding_medium"
+        android:layout_marginTop="@dimen/padding_medium"
+        android:text="@string/entry_title" />
+
+    <EditText
+        android:id="@+id/entryNameEdit"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="@dimen/padding_xlarge"
+        android:layout_marginRight="@dimen/padding_xlarge"
+        android:inputType="text" >
+    </EditText> 
+    
+    <TextView
+        android:id="@+id/tagLabelEdit"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="@dimen/padding_medium"
+        android:text="@string/entry_tag" />
+
+    <AutoCompleteTextView
+        android:id="@+id/taggerEdit"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="@dimen/padding_xlarge"
+        android:layout_marginRight="@dimen/padding_xlarge"
+        android:paddingBottom="2dp"/>
+    <View
+    android:layout_width="fill_parent"
+    android:layout_height="2dp"
+    android:background="@android:color/holo_blue_light"
+    android:layout_marginTop="17dp"/>
+	
+	<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="fill_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal">
+	    <Button 
+	        android:id="@+id/okay"
+	        android:layout_width="wrap_content"
+        	android:layout_height="wrap_content"
+        	android:layout_alignParentRight="true"
+        	android:paddingTop="@dimen/padding_large"
+        	android:paddingBottom="@dimen/padding_large"
+        	android:paddingLeft="18dp"
+        	android:paddingRight="18dp"
+        	android:background="@drawable/dialog_butt"
+	        android:text="Okay"/>
+	    <Button 
+	        android:id="@+id/delete"
+	        android:layout_width="wrap_content"
+        	android:layout_height="wrap_content"
+        	android:layout_centerHorizontal="true"
+        	android:padding="@dimen/padding_large"
+        	android:background="@drawable/dialog_butt"
+	        android:text="Delete"/>
+	    <Button 
+	        android:id="@+id/cancel"
+	        android:layout_width="wrap_content"
+        	android:layout_height="wrap_content"
+        	android:layout_alignParentLeft="true"
+        	android:padding="@dimen/padding_large"
+        	android:background="@drawable/dialog_butt"
+	        android:text="Cancel"/>
+	</RelativeLayout>
+</LinearLayout>
