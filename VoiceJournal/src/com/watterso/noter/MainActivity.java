@@ -1,6 +1,9 @@
 package com.watterso.noter;
 
 import java.io.File;
+import java.io.FileDescriptor;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -21,6 +24,7 @@ import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnPreparedListener;
 import android.media.MediaRecorder;
+import android.media.MediaScannerConnection;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -33,6 +37,7 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.ViewDebug.RecyclerTraceType;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.AdapterView.OnItemLongClickListener;
@@ -42,6 +47,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.watterso.noter.AudioIntentService.AudioBinder;
@@ -50,6 +56,7 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
 	  private static final String TAG = "RecordTaker";
 	  public static final String EXTRA_MESSAGE = "com.watterso.noter.MESSAGE";
 	  public static final String PREFS_NAME = "RecPref";
+	  public static final String REC_PATH  = Environment.getExternalStorageDirectory().getAbsolutePath()+"/Recordings/";
 	  public static final int RECORD_DIALOG = 1;
 	  public Dialog dialog;
 	  public boolean rec = false;
@@ -132,9 +139,10 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
     }
     public void firstTime(){
     	if(mExternalStorageWriteable){
-    		ContextWrapper cw = new ContextWrapper(this);
-    		File newDir = cw.getDir("Recordings", Context.MODE_WORLD_READABLE);
 
+    		File newDir = new File(REC_PATH);
+    		newDir.mkdirs();
+    		
     		SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
     		SharedPreferences.Editor editor = settings.edit();
     		editor.putBoolean("first", true);
@@ -215,6 +223,8 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
 		copSpin.setDropDownViewResource(R.layout.drop);
 		bot.setAdapter(copSpin);
 		bot.setText(editing.getTag());
+		TextView fileN = (TextView)dialog1.findViewById(R.id.fileEdit);
+		fileN.setText(editing.getFile());
 		Button cancel =(Button)dialog1.findViewById(R.id.cancel);
 		cancel.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
@@ -240,8 +250,7 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
 				DatabaseHandler db = new DatabaseHandler(mContext);
 				db.deleteEntry(editing);
 				db.close();
-				ContextWrapper cw = new ContextWrapper(mContext);
-				File file = new File(cw.getDir("Recordings", Context.MODE_WORLD_READABLE).getPath()+editing.getFile());
+				File file = new File(REC_PATH+editing.getFile());
 				file.delete();
 				updateScroll();
 				refreshList();
@@ -374,8 +383,7 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
     	if(mRecorder!=null){
     		recEntry = theEntry;
 			Log.d("onRecord", "entry set");
-			ContextWrapper cw = new ContextWrapper(mContext);
-    		mRecorder.setOutputFile(cw.getDir("Recordings", Context.MODE_WORLD_READABLE)+theEntry.getFile());
+    		mRecorder.setOutputFile(REC_PATH+theEntry.getFile());
 			Log.d("onRecord", "output file set");
     		try {
     			Log.d("onRecord", "trying to prepare");
@@ -395,8 +403,7 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
         if(mediaPlayer!=null){
         	mediaPlayer.reset();
         	try {
-				ContextWrapper cw = new ContextWrapper(mContext);
-        		mediaPlayer.setDataSource(cw.getDir("Recordings", Context.MODE_WORLD_READABLE)+audioFile);
+        		mediaPlayer.setDataSource(REC_PATH+audioFile);
         		mediaPlayer.prepare();
         		mediaPlayer.start();
         		mService.startedPlaying(ent);

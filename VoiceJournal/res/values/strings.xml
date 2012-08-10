@@ -9,6 +9,7 @@
     <string name="seti">Settings</string>
     <string name="entry_title">Add a Title:</string>
     <string name="entry_tag">Tag It:</string>
+    <string name="entry_file">File Name (for reference):</string>
     
 
 </resources>

@@ -53,18 +53,15 @@ public class AudioIntentService extends IntentService {
         }
     };
     class recordTask extends TimerTask {
-        @Override
+		@Override
         public void run() {
             h.sendEmptyMessage(0);
             Intent intented = new Intent(getApplicationContext(), MainActivity.class);
             intented.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            noti = new Notification.Builder(getApplicationContext())
-            .setContentTitle("Recording: "+notiEntry.getName())
-            .setContentText(time)
-            .setSmallIcon(R.drawable.ic_butt_record)
-            .setLargeIcon(rBitmap)
-            .setContentIntent(PendingIntent.getActivity(getApplicationContext(), 0, intented, PendingIntent.FLAG_CANCEL_CURRENT))
-            .build();
+            noti = new Notification(R.drawable.ic_butt_record, "Now Recording: "+notiEntry.getName(),System.currentTimeMillis());
+            noti.setLatestEventInfo(getApplicationContext(), "Recording: "+notiEntry.getName(), time,
+            		PendingIntent.getActivity(getApplicationContext(), 0, intented, PendingIntent.FLAG_CANCEL_CURRENT));
+            
             if(isBackground)	{
             									//confusing wording, if you are not looking at 
             	startForeground(NOTI_ID, noti); //MainActivity, show the notification
@@ -92,13 +89,10 @@ public class AudioIntentService extends IntentService {
            }
            Intent intented = new Intent(getApplicationContext(), MainActivity.class);
            intented.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-           noti = new Notification.Builder(getApplicationContext())
-           .setContentTitle("Playing: "+notiEntry.getName())
-           .setContentText(time)
-           .setSmallIcon(android.R.drawable.ic_lock_silent_mode_off)
-           .setLargeIcon(pBitmap)
-           .setContentIntent(PendingIntent.getActivity(getApplicationContext(), 0, intented, PendingIntent.FLAG_CANCEL_CURRENT))
-           .build();
+           noti = new Notification(android.R.drawable.ic_lock_silent_mode_off, "Now Playing: "+notiEntry.getName(),System.currentTimeMillis());
+           noti.setLatestEventInfo(getApplicationContext(), "Playing: "+notiEntry.getName(), time,
+           		PendingIntent.getActivity(getApplicationContext(), 0, intented, PendingIntent.FLAG_CANCEL_CURRENT));
+           
            if(isBackground&&mPlayer.isPlaying())	{				//confusing wording, if you are not looking at 
            	startForeground(NOTI_ID, noti); //MainActivity, show the notification
            }else{
