@@ -42,7 +42,7 @@ public class Entry {
 		String format = "MMM dd yyyy";
 		SimpleDateFormat ad =new SimpleDateFormat(format);
         String temp = ""+ad.format(this._timeStamp).hashCode();
-        return this._name+temp.substring(0,3);
+        return this._name+temp.substring(0,3)+".amr";
 	}
 	public int getID(){
         return this._id;
