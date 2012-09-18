@@ -5,6 +5,7 @@ import java.io.FileDescriptor;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
 
@@ -12,6 +13,7 @@ import android.app.ActionBar;
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.ComponentName;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.content.Intent;
@@ -25,11 +27,14 @@ import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnPreparedListener;
 import android.media.MediaRecorder;
 import android.media.MediaScannerConnection;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Vibrator;
+import android.provider.MediaStore;
+import android.provider.MediaStore.Audio;
 import android.text.method.KeyListener;
 import android.util.Log;
 import android.view.Menu;
@@ -38,6 +43,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewDebug.RecyclerTraceType;
+import android.webkit.MimeTypeMap;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.AdapterView.OnItemLongClickListener;
@@ -47,6 +53,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ListView;
+import android.widget.ShareActionProvider;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -198,6 +205,18 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
     	    mExternalStorageAvailable = mExternalStorageWriteable = false;
     	}
     }
+    private void addContent(Entry ent){
+    	ContentValues audio = new ContentValues();
+    	audio.put(Audio.Media.TITLE, ent.getFile());
+    	audio.put(Audio.Media.DATE_ADDED, System.currentTimeMillis());
+    	audio.put(Audio.Media.MIME_TYPE, "audio/amr");
+    	audio.put(Audio.Media.DATA, REC_PATH+ent.getFile());
+
+    	Uri result = mContext.getContentResolver().insert(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, audio);
+    }
+    private void deleteContent(Entry ent){
+    	mContext.getContentResolver().delete(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, Audio.Media.TITLE+"=?", new String [] {ent.getFile()});
+    }
     public OnItemLongClickListener mLongListener = new OnItemLongClickListener(){
 
 		public boolean onItemLongClick(AdapterView<?> arg0, View arg1, int arg2, long arg3) {
@@ -254,6 +273,7 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
 				file.delete();
 				updateScroll();
 				refreshList();
+				deleteContent(editing);
 				dialog1.dismiss();
 			}
 		});
@@ -271,6 +291,7 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
 				Drawable back1  = tempV.getBackground();
 				back1.setColorFilter(null);
 			}
+			
 			tempC.setShaded(position);
 			Drawable back = arg1.getBackground();
         	back.mutate().setColorFilter(Color.LTGRAY, PorterDuff.Mode.MULTIPLY);
@@ -286,9 +307,11 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.activity_main, menu);
+        
         return true;
     }
 	public boolean onOptionsItemSelected(MenuItem item) {
+		
     	switch (item.getItemId()) {
     		case R.id.menu_settings:
     			return true;
@@ -348,6 +371,7 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
 							bot.setKeyListener((KeyListener)bot.getTag());
 							mService.stoppedRecording();
 							mRecorder = null;
+							addContent(recEntry);
 							rec = false;
 							dialog.dismiss();
 							db.close();
