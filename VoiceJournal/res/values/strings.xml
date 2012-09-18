@@ -6,10 +6,11 @@
     <string name="plause_play">Plause//Play</string>
     <string name="no_record">No Records Found</string>
     <string name="record">Record Entry</string>
-    <string name="seti">Settings</string>
+    <string name="noti">Show Recording Notification</string>
+    <string name="delete">Delete All</string>
+    <string name="report">Report a Problem</string>
     <string name="entry_title">Add a Title:</string>
     <string name="entry_tag">Tag It:</string>
     <string name="entry_file">File Name (for reference):</string>
-    
-
+    <string name="hello_world">Hello world!</string>
 </resources>

@@ -29,11 +29,14 @@ public class CustomArrayAdapter extends ArrayAdapter<Entry> {
         String temp = entries.get(position).getName();
         if(temp.length()>20)
         	temp=temp.substring(0, 22)+"...";
-        entryName.setText(temp);
+        if(entryName!=null)
+        	entryName.setText(temp);
         TextView entryTag = (TextView) rowView.findViewById(R.id.entryTag);
-        entryTag.setText("#"+entries.get(position).getTag());
+        if(entryTag!=null)
+        	entryTag.setText("#"+entries.get(position).getTag());
         TextView entryDate = (TextView) rowView.findViewById(R.id.entryDate);
-        entryDate.setText(entries.get(position).getFormattedTime());
+        if(entryDate!=null)
+        	entryDate.setText(entries.get(position).getFormattedTime());
         if(currentShaded!=-1 && currentShaded< this.getCount()){
         	Drawable back = rowView.getBackground();
         	if(position == currentShaded){

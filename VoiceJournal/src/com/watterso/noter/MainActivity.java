@@ -1,11 +1,7 @@
 package com.watterso.noter;
 
 import java.io.File;
-import java.io.FileDescriptor;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
 
@@ -15,7 +11,6 @@ import android.app.Dialog;
 import android.content.ComponentName;
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.ContextWrapper;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
@@ -26,7 +21,6 @@ import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnPreparedListener;
 import android.media.MediaRecorder;
-import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -42,8 +36,6 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.view.ViewDebug.RecyclerTraceType;
-import android.webkit.MimeTypeMap;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.AdapterView.OnItemLongClickListener;
@@ -53,7 +45,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ListView;
-import android.widget.ShareActionProvider;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -142,7 +133,9 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
         	mediaController.updateSeek();
         	
         }
+        Log.d("onCreate", "finished");
         db.close();
+        
     }
     public void firstTime(){
     	if(mExternalStorageWriteable){
@@ -164,7 +157,8 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
     	//ArrayAdapter<File> temp = new ArrayAdapter<File>(this, R.layout.listitem, new File(REC_PATH).listFiles());
     	if(!temp.isEmpty()){
     		Log.d("ArrayAdapter", "NOT EMPTY");
-    		recordList.setAdapter(temp);
+    		if(temp!=null)
+    			recordList.setAdapter(temp);
     	}else{
     		Log.d("ArrayAdapter", "EMPTY");
     		String [] tempS = {""};
@@ -306,14 +300,19 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
       	};
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
+        Log.d("onCreateOptions", "started");
         getMenuInflater().inflate(R.menu.activity_main, menu);
-        
+        Log.d("onCreateOptions", "finished");
         return true;
     }
 	public boolean onOptionsItemSelected(MenuItem item) {
 		
     	switch (item.getItemId()) {
-    		case R.id.menu_settings:
+    		case R.id.menu_noti:
+    			return true;
+    		case R.id.menu_delete:
+    			return true;
+    		case R.id.menu_report:
     			return true;
     		case R.id.menu_record:
     			if(mediaPlayer.isPlaying()){
