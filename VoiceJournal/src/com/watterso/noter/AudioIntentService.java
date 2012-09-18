@@ -35,6 +35,7 @@ public class AudioIntentService extends IntentService {
     private Notification noti;
     private Intent recieved;
     private Entry notiEntry;
+    public boolean showRec = true;
     private int curPlay = -1;
 	final Handler h = new Handler() {
         @Override
@@ -56,13 +57,12 @@ public class AudioIntentService extends IntentService {
 		@Override
         public void run() {
             h.sendEmptyMessage(0);
-            Intent intented = new Intent(getApplicationContext(), MainActivity.class);
-            intented.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            noti = new Notification(R.drawable.ic_butt_record, "Now Recording: "+notiEntry.getName(),System.currentTimeMillis());
-            noti.setLatestEventInfo(getApplicationContext(), "Recording: "+notiEntry.getName(), time,
-            		PendingIntent.getActivity(getApplicationContext(), 0, intented, PendingIntent.FLAG_CANCEL_CURRENT));
-            
-            if(isBackground)	{
+            if(isBackground && showRec)	{
+            	 Intent intented = new Intent(getApplicationContext(), MainActivity.class);
+                 intented.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                 noti = new Notification(R.drawable.ic_butt_record, "Now Recording: "+notiEntry.getName(),System.currentTimeMillis());
+                 noti.setLatestEventInfo(getApplicationContext(), "Recording: "+notiEntry.getName(), time,
+                 		PendingIntent.getActivity(getApplicationContext(), 0, intented, PendingIntent.FLAG_CANCEL_CURRENT));
             									//confusing wording, if you are not looking at 
             	startForeground(NOTI_ID, noti); //MainActivity, show the notification
             	//Log.d("RECORD NOTE", "IS SHOWING");

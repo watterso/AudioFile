@@ -4,15 +4,10 @@
         android:icon="@drawable/ic_action_record"
         android:orderInCategory="100"
         android:showAsAction="ifRoom"/>
-    <item android:id="@+id/menu_noti"
-        android:title="@string/noti"
-        android:orderInCategory="100"/>
-    <item android:id="@+id/menu_delete"
-        android:title="@string/delete"
-        android:orderInCategory="100"/>
-    <item android:id="@+id/menu_report"
-        android:title="@string/report"
-        android:orderInCategory="100"/>
-    
+    <item android:id="@+id/menu_seti"
+        android:title="@string/seti"
+        android:icon="@drawable/ic_action_seti"
+        android:orderInCategory="100"
+        android:showAsAction="ifRoom"/>
     
 </menu>

@@ -7,10 +7,12 @@ import java.util.Collections;
 
 import android.app.ActionBar;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.ComponentName;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
@@ -42,6 +44,8 @@ import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ListView;
@@ -272,6 +276,18 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
 			}
 		});
     }
+    public void deleteAll(){
+    	DatabaseHandler db = new DatabaseHandler(mContext);
+    	for(Entry editing: entries){
+    		db.deleteEntry(editing);
+    		File file = new File(REC_PATH+editing.getFile());
+    		file.delete();
+    		deleteContent(editing);
+    	}
+		db.close();
+		updateScroll();
+		refreshList();
+    }
     public OnItemClickListener mClickListener = new OnItemClickListener() {
 		  
 		public void onItemClick(AdapterView<?> arg0, View arg1, int position, long arg3) {
@@ -305,14 +321,42 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
         Log.d("onCreateOptions", "finished");
         return true;
     }
+    public void setiDialog(){
+    	dialog = new Dialog(this);
+		dialog.setOwnerActivity(this);
+		dialog.setContentView(R.layout.settings);
+		dialog.setTitle("Settings");
+		CheckBox notiCheck = (CheckBox) dialog.findViewById(R.id.notiCheck);
+		Log.d("SHOWREC", ""+mService.showRec);
+		notiCheck.setChecked(mService.showRec);
+		notiCheck.setOnCheckedChangeListener(new CheckBox.OnCheckedChangeListener() {
+			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+				mService.showRec = isChecked;
+			}
+		});
+		final AlertDialog alertDialog = new AlertDialog.Builder(this).create();
+		alertDialog.setTitle("Delete all entries?");
+		alertDialog.setMessage("**WARNING** This cannot be undone!");
+		alertDialog.setButton("OK", new DialogInterface.OnClickListener() {
+		      public void onClick(DialogInterface dialog, int which) {
+		    	  deleteAll();
+		 
+		    } });
+		Button delButt = (Button)dialog.findViewById(R.id.delButt);
+		delButt.setOnClickListener(new OnClickListener() {
+			
+			public void onClick(View v) {
+				alertDialog.show();
+				
+			}
+		});
+		dialog.show();
+    }
 	public boolean onOptionsItemSelected(MenuItem item) {
 		
     	switch (item.getItemId()) {
-    		case R.id.menu_noti:
-    			return true;
-    		case R.id.menu_delete:
-    			return true;
-    		case R.id.menu_report:
+    		case R.id.menu_seti:
+    			setiDialog();
     			return true;
     		case R.id.menu_record:
     			if(mediaPlayer.isPlaying()){
@@ -447,7 +491,9 @@ public class MainActivity extends Activity implements OnPreparedListener, MediaL
             // We've bound to service, cast the IBinder and get service instance
         	Log.d("Connected to", "Service");
             AudioBinder binder = (AudioBinder) service;
-            mService = binder.getService();
+            if(mService==null){
+            	mService = binder.getService();
+            }
             mediaPlayer = mService.getPlayer();
             addPrepListener();
             mRecorder = mService.getRecorder();

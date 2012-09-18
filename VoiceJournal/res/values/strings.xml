@@ -5,6 +5,7 @@
     <string name="default_time">00:00</string>
     <string name="plause_play">Plause//Play</string>
     <string name="no_record">No Records Found</string>
+    <string name="seti">Settings</string>
     <string name="record">Record Entry</string>
     <string name="noti">Show Recording Notification</string>
     <string name="delete">Delete All</string>
